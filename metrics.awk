@@ -65,7 +65,9 @@ BEGIN {
     while (t > next_interval) {
         throughput = (total_bytes * 8) / interval  # bps
         avg_delay  = (count_delay > 0) ? (total_delay / count_delay) : 0
-        loss_rate  = (sent_packets > 0) ? ((sent_packets - received_packets) / sent_packets * 100) : 0
+        loss_rate  = (sent_packets > 0) ? (100 * (sent_packets - received_packets) / sent_packets) : 0
+        loss_rate  = (loss_rate < 0) ? 0 : loss_rate  # Ensure it's never negative
+
 
         # Écriture dans les fichiers de sortie
         printf "%.2f %.2f\n", next_interval, throughput >> throughput_file
@@ -86,7 +88,9 @@ END {
     # Calcul pour le dernier intervalle restant
     throughput = (total_bytes * 8) / interval
     avg_delay  = (count_delay > 0) ? (total_delay / count_delay) : 0
-    loss_rate  = (sent_packets > 0) ? ((sent_packets - received_packets) / sent_packets * 100) : 0
+loss_rate  = (sent_packets > 0) ? (100 * (sent_packets - received_packets) / sent_packets) : 0
+loss_rate  = (loss_rate < 0) ? 0 : loss_rate  # Ensure it's never negative
+
 
     printf "%.2f %.2f\n", next_interval, throughput >> throughput_file
     printf "%.2f %.4f\n", next_interval, avg_delay  >> latency_file
