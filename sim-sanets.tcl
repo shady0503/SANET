@@ -1,6 +1,7 @@
 #!/usr/bin/env ns
 #----------------------------------------------------------------------
-# SANET Architecture Simulation
+# SANET Architecture Simulation with Scheduled NAM Node Labeling
+#----------------------------------------------------------------------
 #
 # This simulation deploys a SANET architecture with:
 #   • 2 Sources, 3 Gateways, 2 Destinations (7 nodes)
@@ -13,12 +14,7 @@
 #   2. "vegas" – both FTP flows use TCP/Vegas
 #   3. "mixed" – FTP1 uses TCP/Reno and FTP2 uses TCP/Vegas
 #
-# We choose throughput as the performance parameter for comparing the scenarios.
-#
-# Folder structure:
-#   - This script is saved as sim-sanets.tcl.
-#   - Trace and NAM files will be output to subdirectories of "results/" 
-#     according to the scenario.
+# Throughput is the performance parameter.
 #
 # Usage: ns sim-sanets.tcl <scenario>
 # where <scenario> is one of: reno, vegas, or mixed.
@@ -60,7 +56,7 @@ set val(ifqlen)         50                         ;# Maximum packet queue lengt
 set val(nn)             7                          ;# Total nodes: 2 sources + 3 gateways + 2 destinations
 set val(rp)             DSDV                       ;# Routing protocol
 
-# Simulation area: 600×400 so that we have 3 columns × 2 rows of 200×200 cells.
+# Simulation area: 600×400 (3 columns x 2 rows of 200×200 cells)
 set val(x)              600
 set val(y)              400
 
@@ -71,7 +67,6 @@ set ns_   [new Simulator]
 $ns_ color 2 Red
 $ns_ color 1 Blue
 
-# Set up output files based on scenario
 set tracefileName "results/$simType/trace-$simType.tr"
 set namfileName   "results/$simType/nam-$simType.nam"
 
@@ -88,10 +83,8 @@ set topo   [new Topography]
 $topo load_flatgrid $val(x) $val(y)
 create-god $val(nn)
 
-# Create a single channel instance for all nodes.
 set chan_1_ [new $val(chan)]
 
-# Configure node defaults
 $ns_ node-config -adhocRouting $val(rp) \
     -llType $val(ll) \
     -macType $val(mac) \
@@ -120,50 +113,63 @@ $ns_ node-config -adhocRouting $val(rp) \
 #   node_(6): Destination D2 (Cell F: bottom-right)
 for {set i 0} {$i < $val(nn)} {incr i} {
     set node_($i) [$ns_ node]
-    # Disable random motion for a static deployment
     $node_($i) random-motion 0
-    # Initialize node position (needed by NS-2)
     $ns_ initial_node_pos $node_($i) 20
 }
 
 # Set positions (X, Y, Z coordinates):
-# Sources:
+# Source S1 (node_(0))
 $node_(0) set X_ 100.0  
 $node_(0) set Y_ 300.0
 $node_(0) set Z_ 0.0
 
+# Source S2 (node_(1))
 $node_(1) set X_ 100.0
 $node_(1) set Y_ 100.0
 $node_(1) set Z_ 0.0
 
-# Gateways:
+# Gateway G1 (node_(2))
 $node_(2) set X_ 300.0
 $node_(2) set Y_ 300.0
 $node_(2) set Z_ 0.0
 
-$node_(4) set X_ 300.0
-$node_(4) set Y_ 200.0
-$node_(4) set Z_ 0.0
-
-$node_(5) set X_ 300.0
-$node_(5) set Y_ 100.0
-$node_(5) set Z_ 0.0
-
-# Destinations:
+# Destination D1 (node_(3))
 $node_(3) set X_ 500.0
 $node_(3) set Y_ 300.0
 $node_(3) set Z_ 0.0
 
+# Gateway G3 (node_(4))
+$node_(4) set X_ 300.0
+$node_(4) set Y_ 200.0
+$node_(4) set Z_ 0.0
+
+# Gateway G2 (node_(5))
+$node_(5) set X_ 300.0
+$node_(5) set Y_ 100.0
+$node_(5) set Z_ 0.0
+
+# Destination D2 (node_(6))
 $node_(6) set X_ 500.0
 $node_(6) set Y_ 100.0
 $node_(6) set Z_ 0.0
 
-# Issue setdest commands at time 0 to “fix” the positions.
+# Fix node positions at time 0.
 for {set i 0} {$i < $val(nn)} {incr i} {
     set xpos [$node_($i) set X_]
     set ypos [$node_($i) set Y_]
     $ns_ at 0.0 "$node_($i) setdest $xpos $ypos 0.0"
 }
+
+#--------------------------
+# Schedule Node Labeling for NAM
+#--------------------------
+$ns_ at 0.0 "$node_(0) label \"Source S1\""
+$ns_ at 0.0 "$node_(1) label \"Source S2\""
+$ns_ at 0.0 "$node_(2) label \"Gateway G1\""
+$ns_ at 0.0 "$node_(3) label \"Destination D1\""
+$ns_ at 0.0 "$node_(4) label \"Gateway G3\""
+$ns_ at 0.0 "$node_(5) label \"Gateway G2\""
+$ns_ at 0.0 "$node_(6) label \"Destination D2\""
 
 #--------------------------
 # Set Up FTP Traffic

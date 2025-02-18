@@ -18,6 +18,13 @@ n -t 0.000000 -s 3 -x 500.000000 -y 300.000000 -U 0.000000 -V 0.000000 -T 0.0000
 n -t 0.000000 -s 4 -x 300.000000 -y 200.000000 -U 0.000000 -V 0.000000 -T 0.000000
 n -t 0.000000 -s 5 -x 300.000000 -y 100.000000 -U 0.000000 -V 0.000000 -T 0.000000
 n -t 0.000000 -s 6 -x 500.000000 -y 100.000000 -U 0.000000 -V 0.000000 -T 0.000000
+n -t 0 -s 0 -S DLABEL -l "Source S1" -L ""
+n -t 0 -s 1 -S DLABEL -l "Source S2" -L ""
+n -t 0 -s 2 -S DLABEL -l "Gateway G1" -L ""
+n -t 0 -s 3 -S DLABEL -l "Destination D1" -L ""
+n -t 0 -s 4 -S DLABEL -l "Gateway G3" -L ""
+n -t 0 -s 5 -S DLABEL -l "Gateway G2" -L ""
+n -t 0 -s 6 -S DLABEL -l "Destination D2" -L ""
 + -t 0.034797973 -s 0 -d -1 -p message -e 32 -c 2 -a 0 -i 0 -k RTR 
 - -t 0.034797973 -s 0 -d -1 -p message -e 32 -c 2 -a 0 -i 0 -k RTR
 h -t 0.034797973 -s 0 -d -1 -p message -e 32 -c 2 -a 0 -i 0 -k RTR
