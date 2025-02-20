@@ -1,7 +1,7 @@
 #!/usr/bin/env ns
 #----------------------------------------------------------------------
-# SANET Architecture Simulation with Enhanced Monitoring and
-# Scheduled NAM Node Labeling
+# SANET Architecture Simulation with Monitoring, Packet Counting,
+# and Scheduled NAM Node Labeling
 #----------------------------------------------------------------------
 #
 # This simulation deploys a SANET architecture with:
@@ -13,12 +13,8 @@
 #   2. "vegas" – both FTP flows use TCP/Vegas
 #   3. "mixed" – FTP1 uses TCP/Reno and FTP2 uses TCP/Vegas
 #
-# The functionality (monitoring, packet counting, termination, etc.)
-# is taken from the first code, while the node positioning and NAM
-# labeling is taken from the second code.
-#
 # Usage: ns sim-sanets.tcl <scenario>
-# where <scenario> is one of: reno, vegas, or mixed.
+#  where <scenario> is one of: reno, vegas, or mixed.
 #----------------------------------------------------------------------
 
 if {[llength $argv] < 1} {
@@ -46,20 +42,21 @@ if {$simType == "reno"} {
 #--------------------------
 # Simulation Parameters
 #--------------------------
-set val(chan)           Channel/WirelessChannel    
-set val(prop)           Propagation/TwoRayGround   
-set val(netif)          Phy/WirelessPhy            
-set val(mac)            Mac/802_11                 
-set val(ifq)            Queue/DropTail/PriQueue    
-set val(ll)             LL                          
-set val(ant)            Antenna/OmniAntenna        
-set val(ifqlen)         50                          
-set val(nn)             7                           
-set val(rp)             DSDV                        
+set val(chan)           Channel/WirelessChannel
+set val(prop)           Propagation/TwoRayGround
+set val(netif)          Phy/WirelessPhy
+set val(mac)            Mac/802_11
+set val(ifq)            Queue/DropTail/PriQueue
+set val(ll)             LL
+set val(ant)            Antenna/OmniAntenna
+set val(ifqlen)         50      ;# Default interface queue length
+set val(nn)             7
+set val(rp)             DSDV
 set val(x)              600
 set val(y)              400
-set val(stop)           100.0                      ;# Extended simulation time
-set val(packet_size)    1000                       ;# Packet size in bytes
+# Shorten the simulation time to 300 seconds
+set val(stop)           300.0
+set val(packet_size)    1000    ;# Default packet size
 
 #--------------------------
 # Set Up Simulator & Tracing
@@ -75,9 +72,6 @@ set tracefd   [open $tracefileName w]
 $ns_ trace-all $tracefd
 
 set namtrace [open $namfileName w]
-$ns_ namtrace-all-wireless $namtrace $val(x) $val(y)
-
-# Enable packet tracing for NAM
 $ns_ namtrace-all-wireless $namtrace $val(x) $val(y)
 
 #--------------------------
@@ -142,7 +136,7 @@ $node_(6) set X_ 500.0  ;# Destination D2
 $node_(6) set Y_ 100.0
 $node_(6) set Z_ 0.0
 
-# Fix node positions at time 0.
+# Fix node positions at time 0
 for {set i 0} {$i < $val(nn)} {incr i} {
     set xpos [$node_($i) set X_]
     set ypos [$node_($i) set Y_]
@@ -161,7 +155,7 @@ $ns_ at 0.0 "$node_(6) label \"Destination D2\""
 #--------------------------
 # Traffic Configuration
 #--------------------------
-# TCP1/FTP1 Configuration
+# TCP1/FTP1
 set tcp1 [new Agent/TCP/$tcpType1]
 $tcp1 set class_ 2
 $tcp1 set packetSize_ $val(packet_size)
@@ -170,16 +164,13 @@ $ns_ attach-agent $node_(0) $tcp1
 $ns_ attach-agent $node_(3) $sink1
 $ns_ connect $tcp1 $sink1
 
-# Set up monitoring for TCP1
-set f1 [open "results/$simType/tcp1.tr" w]
-$tcp1 attach $f1
-$tcp1 trace cwnd_
+
 
 set ftp1 [new Application/FTP]
 $ftp1 attach-agent $tcp1
 $ns_ at 0.0 "$ftp1 start"
 
-# TCP2/FTP2 Configuration
+# TCP2/FTP2
 set tcp2 [new Agent/TCP/$tcpType2]
 $tcp2 set class_ 1
 $tcp2 set packetSize_ $val(packet_size)
@@ -188,10 +179,6 @@ $ns_ attach-agent $node_(1) $tcp2
 $ns_ attach-agent $node_(6) $sink2
 $ns_ connect $tcp2 $sink2
 
-# Set up monitoring for TCP2
-set f2 [open "results/$simType/tcp2.tr" w]
-$tcp2 attach $f2
-$tcp2 trace cwnd_
 
 set ftp2 [new Application/FTP]
 $ftp2 attach-agent $tcp2
@@ -205,26 +192,14 @@ set final_tcp1_seqno 0
 set final_tcp2_seqno 0
 
 proc record {} {
-    global ns_ tcp1 tcp2 f1 f2 val stats_recorded final_tcp1_seqno final_tcp2_seqno
+    global ns_ tcp1 tcp2 val stats_recorded final_tcp1_seqno final_tcp2_seqno
     
     set now [$ns_ now]
     
     if {$now < [expr $val(stop) - 1]} {
         set tcp1_seqno [$tcp1 set ack_]
         set tcp2_seqno [$tcp2 set ack_]
-        
-        if {[catch {puts $f1 "$now $tcp1_seqno"}]} {
-            # Ignore errors silently
-        } else {
-            flush $f1
-        }
-        
-        if {[catch {puts $f2 "$now $tcp2_seqno"}]} {
-            # Ignore errors silently
-        } else {
-            flush $f2
-        }
-        
+
         # Schedule the next recording
         $ns_ at [expr $now + 1.0] "record"
     } elseif {$stats_recorded == 0} {
@@ -252,11 +227,11 @@ $ns_ at 0.0 "record"
 #--------------------------
 # Terminate Simulation
 #--------------------------
-# Stop the FTP applications first
+# Stop FTP applications first
 $ns_ at [expr $val(stop) - 1.0] "$ftp1 stop"
 $ns_ at [expr $val(stop) - 1.0] "$ftp2 stop"
 
-# Detach agents and clean up nodes
+# Detach agents and clean up
 $ns_ at [expr $val(stop) - 0.5] {
     global ns_ tcp1 tcp2 sink1 sink2 node_
     $ns_ detach-agent $node_(0) $tcp1
@@ -276,15 +251,10 @@ $ns_ at [expr $val(stop) - 0.1] "finish"
 $ns_ at $val(stop) "puts \"NS EXITING...\" ; $ns_ halt"
 
 proc finish {} {
-    global ns_ tracefd namtrace f1 f2
-    
-    # Flush and close files
+    global ns_ tracefd namtrace
     catch {$ns_ flush-trace}
     catch {close $tracefd}
     catch {close $namtrace}
-    catch {close $f1}
-    catch {close $f2}
-    
     puts "Simulation finished. Check trace files for analysis."
 }
 
